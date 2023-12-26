@@ -1,12 +1,6 @@
 import numpy as np
 import gymnasium as gym
 
-# try:
-#     from utils import logger
-# except:
-#     import sys
-#     sys.path.append("../utils/")
-#     import logger
 
 """
 T-Maze: originated from (Bakker, 2001) and earlier neuroscience work, 
@@ -189,15 +183,14 @@ class TMazeBase(gym.Env):
 class TMazeOurs(TMazeBase):
     def __init__(
         self,
-        episode_length: int = 161,
-        corridor_length: int = 160,
+        episode_length: int = 11,
+        corridor_length: int = 10,
         goal_reward: float = 1.0,
         penalty: float = 0.0,
-        distract_reward: float = 0.0,
         seed: int = None,
     ):
         """
-        Transforms observation: [x, y, hint] -> [y, hint, flag, noise]
+        Transforms observation of the  base environment: [x, y, hint] -> [y, hint, flag, noise]
             flag: whether the agent is at the T junction of the maze
             noise: random int from [-1; 1]
         """
@@ -206,7 +199,7 @@ class TMazeOurs(TMazeBase):
             corridor_length=corridor_length,
             goal_reward=goal_reward,
             penalty=penalty,
-            distract_reward=distract_reward,
+            distract_reward=0.0,
             expose_goal=False,
             ambiguous_position=False,
             add_timestep=False,
@@ -214,24 +207,34 @@ class TMazeOurs(TMazeBase):
         )
     
     def get_obs(self):
-        obs = super().get_obs()
-        flag = 1 if obs[0] == self.corridor_length else 0
+        flag = 1 if self.x == self.corridor_length else 0
         noise = np.random.randint(-1, 2)
+        obs = super().get_obs()
         obs = obs[1:]  # remove 'x'
         obs = np.append(obs, [flag, noise])
         return obs
-
+    
+    def step(self, action):
+        obs, rew, done, trunc, info = super().step(action)
+        if self.y != 0:
+            self.last_success = self.y == self.goal_y
+            self.current_cue = 1 if self.goal_y == 1 else 3
+            info['episode_extra_stats']={"success": int(self.last_success),"new_cue":self.current_cue}
+        return obs, rew, done, trunc, info
+    
 
 if __name__ == "__main__":
-    env = TMazeOurs()
+    episode_length = 200
+    corridor_length = 160
+    env = TMazeOurs(episode_length=episode_length, corridor_length=corridor_length)
     s0, _ = env.reset()
     hint = s0[1]
     done = False
     step = 0
     R = 0
     while not done:
-        a = 0 if step != 160 else (1 if hint == 1 else 3)
-        s, r, done, tr, i = env.step(a)
+        a = 0 if step != corridor_length else (1 if hint == 1 else 3)
+        s, r, done, trunc, info = env.step(a)
         step += 1
         R += r
-    print(s0, s, R, done, step)
+    print(s0, s, R, done, step, info)
