@@ -12,7 +12,7 @@ import time
 import logging
 
 from src.trainers.base_trainer import BaseTrainer
-from src.tasks.tmaze import create_tmazev2
+from src.tasks.tmaze import create_tmazev2, create_tmaze_ours
 from src.tasks.memory_gym_env import  create_memorygym_env
 from src.agents.a2c import A2CAgent
 from src.agents.ppo import PPOAgent
@@ -30,6 +30,10 @@ def get_env_initializers(env_config):
     env_config=OmegaConf.to_container(env_config)
     if env_config['task']=='tmazev2':
         env_fn=lambda: create_tmazev2(**env_config)
+        repr_fn=flatten_repr_model()
+        return env_fn,env_fn,repr_fn
+    elif env_config['task']=='tmaze_ours':
+        env_fn=lambda: create_tmaze_ours(**env_config)
         repr_fn=flatten_repr_model()
         return env_fn,env_fn,repr_fn
     elif env_config['task']=='memory_gym':

@@ -35,6 +35,7 @@ def main(config: DictConfig):
         'minigrid_onehot':ControlTrainer,
         'tmazev1':ControlTrainer,
         'tmazev2':ControlTrainer,
+        'tmaze_ours':ControlTrainer,
         'memory_gym':ControlTrainer,
         'popgym':ControlTrainer,
         'memory_maze':ControlTrainer,

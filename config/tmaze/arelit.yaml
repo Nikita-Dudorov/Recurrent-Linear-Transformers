@@ -7,7 +7,7 @@ log_interval: 10000
 eval_interval: null
 save_interval: null
 task: 
-  task: tmazev2
+  task: "tmaze_ours"  # tmazev2
   corridor_len: 180
   num_distractors: 6
   max_steps: null

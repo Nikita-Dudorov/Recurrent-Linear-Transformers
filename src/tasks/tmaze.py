@@ -184,3 +184,8 @@ def create_tmazev2(**kwargs):
     env=wrappers.TimeLimit(SimplerTMazeWDistractors(corridor_len=kwargs.get("corridor_len",10),num_distractors=kwargs.get("num_distractors",6),
                     render_mode=kwargs.get("render_mode",None),seed=kwargs.get("seed",None)),max_episode_steps=kwargs.get("max_episode_steps",1000))
     return env
+
+def create_tmaze_ours(**kwargs):
+    from .tmaze_ours import TMazeOurs
+    env=TMazeOurs(episode_length=kwargs.get("max_episode_steps",1000),corridor_length=kwargs.get("corridor_len",10),seed=kwargs.get("seed",None))
+    return env

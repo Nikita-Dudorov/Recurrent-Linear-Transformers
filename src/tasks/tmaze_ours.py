@@ -205,6 +205,11 @@ class TMazeOurs(TMazeBase):
             add_timestep=False,
             seed=seed,
         )
+        obs_dim = 4
+        self.observation_space = gym.spaces.Box(
+            low=-1.0, high=1.0, shape=(obs_dim,), dtype=np.float32
+        )
+        self.last_success = False
     
     def get_obs(self):
         flag = 1 if self.x == self.corridor_length else 0
@@ -218,16 +223,24 @@ class TMazeOurs(TMazeBase):
         obs, rew, done, trunc, info = super().step(action)
         if self.y != 0:
             self.last_success = self.y == self.goal_y
-            self.current_cue = 1 if self.goal_y == 1 else 3
-            info['episode_extra_stats']={"success": int(self.last_success),"new_cue":self.current_cue}
+            info['episode_extra_stats'] = {"success": int(self.last_success), "new_cue": self.current_cue}
         return obs, rew, done, trunc, info
-    
+
+    def reset(self, seed=None, options=None):
+        if seed is not None:
+            self.seed(seed)
+        obs, info = super().reset()
+        self.current_cue = 1 if self.goal_y == 1 else 3
+        info = {"success": int(self.last_success), "new_cue": self.current_cue}
+        self.last_success = False  # reset
+        return obs, info
+
 
 if __name__ == "__main__":
     episode_length = 200
     corridor_length = 160
     env = TMazeOurs(episode_length=episode_length, corridor_length=corridor_length)
-    s0, _ = env.reset()
+    s0, info0 = env.reset(seed=None)
     hint = s0[1]
     done = False
     step = 0
@@ -237,4 +250,4 @@ if __name__ == "__main__":
         s, r, done, trunc, info = env.step(a)
         step += 1
         R += r
-    print(s0, s, R, done, step, info)
+    print(s0, info0, s, info, R, done, trunc, step)
