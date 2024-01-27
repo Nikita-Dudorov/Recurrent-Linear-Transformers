@@ -187,5 +187,12 @@ def create_tmazev2(**kwargs):
 
 def create_tmaze_ours(**kwargs):
     from .tmaze_ours import TMazeOurs
-    env=TMazeOurs(episode_length=kwargs.get("max_episode_steps",1000),corridor_length=kwargs.get("corridor_len",10),seed=kwargs.get("seed",None))
+    env=TMazeOurs(
+        episode_length=kwargs["max_episode_steps"],
+        corridor_length=kwargs["corridor_len"],
+        goal_reward=kwargs["goal_reward"],
+        mistake_penalty=kwargs["mistake_penalty"],
+        timestep_penalty=kwargs["timestep_penalty"],
+        seed=kwargs["seed"],
+    )
     return env

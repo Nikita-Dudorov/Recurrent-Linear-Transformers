@@ -186,11 +186,12 @@ class TMazeOurs(TMazeBase):
         episode_length: int = 11,
         corridor_length: int = 10,
         goal_reward: float = 1.0,
-        penalty: float = 0.0,
+        mistake_penalty: float = 0.0,
+        timestep_penalty: float = 0.0,
         seed: int = None,
     ):
         """
-        Transforms observation of the  base environment: [x, y, hint] -> [y, hint, flag, noise]
+        Transforms observation of the  base environment: [x, y, cue] -> [y, cue, flag, noise]
             flag: whether the agent is at the T junction of the maze
             noise: random int from [-1; 1]
         """
@@ -198,7 +199,7 @@ class TMazeOurs(TMazeBase):
             episode_length=episode_length,
             corridor_length=corridor_length,
             goal_reward=goal_reward,
-            penalty=penalty,
+            penalty=0.0,
             distract_reward=0.0,
             expose_goal=False,
             ambiguous_position=False,
@@ -209,45 +210,61 @@ class TMazeOurs(TMazeBase):
         self.observation_space = gym.spaces.Box(
             low=-1.0, high=1.0, shape=(obs_dim,), dtype=np.float32
         )
+        self.mistake_penalty = mistake_penalty
+        self.timestep_penalty = timestep_penalty
         self.last_success = False
     
     def get_obs(self):
         flag = 1 if self.x == self.corridor_length else 0
         noise = np.random.randint(-1, 2)
         obs = super().get_obs()
-        obs = obs[1:]  # remove 'x'
+        obs = obs[1:]  # [x, y, cue] -> [y, cue]
         obs = np.append(obs, [flag, noise])
         return obs
     
     def step(self, action):
+        if isinstance(action, np.ndarray):
+            action = action.item()
         obs, rew, done, trunc, info = super().step(action)
         if self.y != 0:
             self.last_success = self.y == self.goal_y
+            rew -= (not self.last_success) * self.mistake_penalty
             info['episode_extra_stats'] = {"success": int(self.last_success), "new_cue": self.current_cue}
+        else:
+            rew -= self.timestep_penalty
         return obs, rew, done, trunc, info
 
     def reset(self, seed=None, options=None):
         if seed is not None:
             self.seed(seed)
         obs, info = super().reset()
-        self.current_cue = 1 if self.goal_y == 1 else 3
+        self.current_cue = self.goal_y
         info = {"success": int(self.last_success), "new_cue": self.current_cue}
         self.last_success = False  # reset
         return obs, info
+    
+    def render(self):
+        frame = np.zeros((3, self.corridor_length+1, 3), dtype=np.uint8)
+        frame[1-self.y, self.x, :] = 128
+        frame[1-self.goal_y, self.corridor_length, :] = 255
+        return frame
 
 
 if __name__ == "__main__":
-    episode_length = 200
+    episode_length = 1000
     corridor_length = 160
     env = TMazeOurs(episode_length=episode_length, corridor_length=corridor_length)
     s0, info0 = env.reset(seed=None)
-    hint = s0[1]
+    x0 = env.x
+    cue = s0[1]
     done = False
     step = 0
     R = 0
     while not done:
-        a = 0 if step != corridor_length else (1 if hint == 1 else 3)
+        a = 0 if step != corridor_length else (1 if cue == 1 else 3)
         s, r, done, trunc, info = env.step(a)
         step += 1
         R += r
+        x = env.x
     print(s0, info0, s, info, R, done, trunc, step)
+    print(x0, x)
