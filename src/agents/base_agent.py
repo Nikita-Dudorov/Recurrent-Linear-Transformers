@@ -192,6 +192,7 @@ class BaseAgent:
         o_tick,_=self.eval_env.reset()
         episode_lens=[]
         episode_avgreturns=[]
+        episode_scores=[]
         rollouts=[]
         term_tick=jnp.zeros((1,1),dtype=bool)  #Initialize terminal state to False
         #Initialize zero hidden state at the start of each episode, shape is infered from the hidden state of the first environment
@@ -226,6 +227,15 @@ class BaseAgent:
             rewards=jnp.array(rewards,dtype=jnp.float32)
             avg_return=rlax.discounted_returns(rewards,self.gamma*jnp.ones_like(rewards),jnp.zeros_like(rewards)).mean()
             episode_avgreturns.append(avg_return)
+            score = info['success'] if 'success' in info else rewards.sum()
+            episode_scores.append(score)
         avg_episode_len=jnp.array(episode_lens).mean()
         avg_episode_return=jnp.array(episode_avgreturns).mean()
-        return avg_episode_len,avg_episode_return,rollouts
+        avg_episode_score=jnp.array(episode_scores).mean()
+        eval_info = {
+            'avg_episode_len': avg_episode_len,
+            'avg_episode_return': avg_episode_return,
+            'avg_episode_score': avg_episode_score,
+            'rollouts': rollouts,
+        }
+        return eval_info

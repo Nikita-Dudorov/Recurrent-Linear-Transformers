@@ -265,13 +265,18 @@ class ControlTrainer(BaseTrainer):
         
         if self.eval_interval is not None and self.step_count>=self.next_eval_step:
             self.next_eval_step+=self.eval_interval
-            avg_episode_len,avg_episode_return,rollouts=self.agent.evaluate(self.random_key,self.global_config['eval_episodes'])
+            eval_info = self.agent.evaluate(self.random_key,self.global_config['eval_episodes'])
+            avg_episode_len = eval_info['avg_episode_len']
+            avg_episode_return = eval_info['avg_episode_return']
+            avg_episode_score = eval_info['avg_episode_score']
+            rollouts = eval_info['rollouts']
             rollouts=np.concatenate(rollouts,axis=0)
             if metrics is None:
                 metrics={}
             metrics['step']=self.step_count
             metrics['eval_avg_episode_len']=float(avg_episode_len)
             metrics['eval_avg_episode_return']=float(avg_episode_return)
+            metrics['eval_avg_episode_score']=float(avg_episode_score)
             metrics['rollouts']=wandb.Video(rollouts, fps=self.global_config.get('record_fps',5), format="gif")
         if self.save_interval is not None and self.step_count>=self.next_save_step:
             self.next_save_step+=self.save_interval
