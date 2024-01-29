@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 outputs/  
 wandb/
+checkpoints/
 # C extensions
 *.so
 .DS_Store

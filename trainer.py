@@ -45,7 +45,7 @@ def main(config: DictConfig):
 
     logger.info("Starting Job for Config:\n"+str(OmegaConf.to_yaml(config)))
     logger.info("Available Backends:"+str(jax.devices()))
-    tags=config.tags.split(',') if config.tags is not None else []
+    tags=config.tags if config.tags is not None else []
     if config.use_wandb:
         run = wandb.init(project=config.project_name,tags=tags,settings=wandb.Settings(start_method="fork"),config=OmegaConf.to_container(config))
     else:

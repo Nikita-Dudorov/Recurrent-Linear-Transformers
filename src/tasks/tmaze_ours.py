@@ -186,7 +186,7 @@ class TMazeOurs(TMazeBase):
         episode_length: int = 11,
         corridor_length: int = 10,
         goal_reward: float = 1.0,
-        mistake_penalty: float = 0.0,
+        goal_penalty: float = 0.0,
         timestep_penalty: float = 0.0,
         seed: int = None,
     ):
@@ -210,12 +210,12 @@ class TMazeOurs(TMazeBase):
         self.observation_space = gym.spaces.Box(
             low=-1.0, high=1.0, shape=(obs_dim,), dtype=np.float32
         )
-        self.mistake_penalty = mistake_penalty
+        self.goal_penalty = goal_penalty
         self.timestep_penalty = timestep_penalty
         self.last_success = False
     
     def get_obs(self):
-        flag = 1 if self.x == self.corridor_length else 0
+        flag = 1 if (self.x == self.corridor_length and self.y == 0) else 0
         noise = np.random.randint(-1, 2)
         obs = super().get_obs()
         obs = obs[1:]  # [x, y, cue] -> [y, cue]
@@ -228,7 +228,7 @@ class TMazeOurs(TMazeBase):
         obs, rew, done, trunc, info = super().step(action)
         if self.y != 0:
             self.last_success = self.y == self.goal_y
-            rew -= (not self.last_success) * self.mistake_penalty
+            rew -= (not self.last_success) * self.goal_penalty
             info['episode_extra_stats'] = {"success": int(self.last_success), "new_cue": self.current_cue}
         else:
             rew -= self.timestep_penalty
@@ -253,7 +253,16 @@ class TMazeOurs(TMazeBase):
 if __name__ == "__main__":
     episode_length = 1000
     corridor_length = 160
-    env = TMazeOurs(episode_length=episode_length, corridor_length=corridor_length)
+    goal_reward = 4
+    goal_penalty = 1
+    timestep_penalty = 0.1
+    env = TMazeOurs(
+        episode_length=episode_length, 
+        corridor_length=corridor_length,
+        goal_reward=goal_reward,
+        goal_penalty=goal_penalty,
+        timestep_penalty=timestep_penalty,
+    )
     s0, info0 = env.reset(seed=None)
     x0 = env.x
     cue = s0[1]
@@ -266,5 +275,7 @@ if __name__ == "__main__":
         step += 1
         R += r
         x = env.x
-    print(s0, info0, s, info, R, done, trunc, step)
-    print(x0, x)
+    print(f"init_state: {s0}, init_info: {info0}")
+    print(f"final_state: {s}, final_info: {info}")
+    print(f"total_reward: {R}, total_steps: {step}, done: {done}, truncated: {trunc}")
+    print(f"init_x: {x0}, final_x: {x}")

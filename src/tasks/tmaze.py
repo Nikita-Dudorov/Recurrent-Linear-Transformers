@@ -191,7 +191,7 @@ def create_tmaze_ours(**kwargs):
         episode_length=kwargs["max_episode_steps"],
         corridor_length=kwargs["corridor_len"],
         goal_reward=kwargs["goal_reward"],
-        mistake_penalty=kwargs["mistake_penalty"],
+        goal_penalty=kwargs["goal_penalty"],
         timestep_penalty=kwargs["timestep_penalty"],
         seed=kwargs["seed"],
     )
