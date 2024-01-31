@@ -7,3 +7,5 @@ gymnasium
 memory_gym
 tqdm
 flax
+moviepy 
+imageio
