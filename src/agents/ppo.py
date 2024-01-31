@@ -24,10 +24,10 @@ class PPOAgent(BaseAgent):
                          num_steps=128, anneal_lr=True, gamma=0.99, lr_schedule=optax.linear_schedule,
                         gae_lambda=0.95, num_minibatches=4, update_epochs=4, norm_adv=True,
                         clip_coef=0.1, ent_schedule=optax.Schedule, vf_coef=0.5, max_grad_norm=0.5,
-                        target_kl=None,sequence_length=None) -> None:
+                        target_kl=None,sequence_length=None,continuous_actions=False) -> None:
 
         super(PPOAgent,self).__init__(train_envs=train_envs,eval_env=eval_env,rollout_len=num_steps,repr_model_fn=repr_model_fn,seq_model_fn=seq_model_fn,
-                        actor_fn=actor_fn,critic_fn=critic_fn,use_gumbel_sampling=True,sequence_length=sequence_length)
+                        actor_fn=actor_fn,critic_fn=critic_fn,use_gumbel_sampling=True,sequence_length=sequence_length,continuous_actions=continuous_actions)
         
         self.optimizer=optimizer
         self.num_envs = self.env.num_envs

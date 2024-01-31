@@ -40,6 +40,7 @@ def main(config: DictConfig):
         'popgym':ControlTrainer,
         'memory_maze':ControlTrainer,
         'procgen':ControlTrainer,
+        'mujoco':ControlTrainer,
     }
 
 

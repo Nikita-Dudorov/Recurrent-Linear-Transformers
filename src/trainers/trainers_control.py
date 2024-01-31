@@ -14,6 +14,7 @@ import logging
 from src.trainers.base_trainer import BaseTrainer
 from src.tasks.tmaze import create_tmazev2, create_tmaze_ours
 from src.tasks.memory_gym_env import  create_memorygym_env
+from src.tasks.mujoco_env import create_mujoco_env
 from src.agents.a2c import A2CAgent
 from src.agents.ppo import PPOAgent
 from src.model_fns import *
@@ -34,13 +35,20 @@ def get_env_initializers(env_config):
         return env_fn,env_fn,repr_fn
     elif env_config['task']=='tmaze_ours':
         env_fn=lambda: create_tmaze_ours(**env_config)
+        eval_env_fn=lambda: create_tmaze_ours(**env_config)
         repr_fn=flatten_repr_model()
-        return env_fn,env_fn,repr_fn
+        return env_fn,eval_env_fn,repr_fn
     elif env_config['task']=='memory_gym':
         env_fn=lambda: create_memorygym_env(env_config['env_name'])
         repr_fn=atari_conv_repr_model()
         eval_env_fn=lambda: create_memorygym_env(env_config['env_name'])
         return env_fn,eval_env_fn,repr_fn
+    elif env_config['task']=='mujoco':
+        env_fn=lambda: create_mujoco_env(env_config['env_name'])
+        eval_env_fn=lambda: create_mujoco_env(env_config['env_name'])
+        repr_fn=flatten_repr_model()
+        return env_fn,eval_env_fn,repr_fn
+
 
 
 class ControlTrainer(BaseTrainer):
@@ -92,7 +100,7 @@ class ControlTrainer(BaseTrainer):
             model_fn=seq_model_arelit(**self.trainer_config['seq_model'],seed=kwargs['seed'])
 
         if self.global_config.get("continuous_actions", False):
-            actor_fn=actor_model_continuous(self.trainer_config['d_actor'],eval_env.action_space.n)
+            actor_fn=actor_model_continuous(self.trainer_config['d_actor'],sum(eval_env.action_space.shape))
         else:
             actor_fn=actor_model_discete(self.trainer_config['d_actor'],eval_env.action_space.n)
         critic_fn=critic_model(self.trainer_config['d_critic'])
@@ -143,7 +151,8 @@ class ControlTrainer(BaseTrainer):
                                 vf_coef=self.trainer_config.get('vf_coef', 0.5),
                                 max_grad_norm=self.trainer_config.get('max_grad_norm', 0.5),
                                 target_kl=self.trainer_config.get('target_kl', None),
-                                sequence_length=self.trainer_config.get('sequence_length', None))
+                                sequence_length=self.trainer_config.get('sequence_length', None),
+                                continuous_actions=self.global_config.get("continuous_actions", False))
 
         
         self.agent.reset(params_key,self.random_key)
