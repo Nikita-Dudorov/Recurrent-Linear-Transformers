@@ -1,5 +1,6 @@
 import jax
 import jax.numpy as jnp
+import jax.scipy as jsp
 import optax
 import rlax
 import flax
@@ -75,8 +76,13 @@ class PPOAgent(BaseAgent):
             
             def ppo_loss(params, random_key, mb_observations, mb_actions,mb_terminations,
                             mb_logp, mb_advantages, mb_returns,mb_h_tickminus1):
-                logits_new,values_new,_=self.actor_critic_fn(random_key,params,mb_observations,mb_terminations,
-                                                             mb_h_tickminus1)
+                if self.continuous_actions:
+                    actor_out_new,values_new,_=self.actor_critic_fn(random_key,params,mb_observations,mb_terminations,mb_h_tickminus1)
+                    act_mean_new, act_logstd_new = actor_out_new
+                    actions_new = jax.random.normal(random_key, shape=act_mean_new.shape) * act_logstd_new.exp() + act_mean_new
+                    logits_new = jsp.stats.norm.logpdf(actions_new, loc=act_mean_new, scale=act_logstd_new.exp()).sum(-1)  # suppose independent action components -> summation over action dim
+                else:    
+                    logits_new,values_new,_=self.actor_critic_fn(random_key,params,mb_observations,mb_terminations,mb_h_tickminus1)
                 #newlogprob, entropy, newvalue = get_action_and_value2(random_key,params, x, a)
                 B,T=mb_actions.shape
                 newlogprobs=jax.nn.log_softmax(logits_new).reshape(B*T,-1)

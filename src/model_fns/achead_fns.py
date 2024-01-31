@@ -13,6 +13,16 @@ def actor_model_discete(dense_dim,action_space):
                                     bias_init=constant(0.0))])
     return thurn
 
+def actor_model_continuous(dense_dim,action_space):
+    def thurn():
+        actor_mean = nn.Sequential([nn.Dense(dense_dim,kernel_init=orthogonal(jnp.sqrt(2)),bias_init=constant(0.0)),
+                                    nn.tanh,
+                                    nn.Dense(action_space,kernel_init=orthogonal(jnp.sqrt(2)),bias_init=constant(0.0))])
+        actor_logstd = nn.Sequential([nn.Dense(dense_dim,kernel_init=orthogonal(jnp.sqrt(2)),bias_init=constant(0.0)),
+                                   nn.tanh,
+                                   nn.Dense(action_space,kernel_init=orthogonal(jnp.sqrt(2)),bias_init=constant(0.0))])
+        return actor_mean, actor_logstd
+    return thurn
 
 def critic_model(dense_dim):
     def thurn():

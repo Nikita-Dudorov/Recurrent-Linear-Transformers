@@ -10,6 +10,7 @@ class ActorCriticModel(nn.Module):
     seq_model_fn:Callable
     actor_fn:Callable
     critic_fn:Callable
+    continuous_actions:bool
 
 
     def setup(self):
@@ -33,7 +34,12 @@ class ActorCriticModel(nn.Module):
         # TXlatent_dim, image or otherwise, they are always flattened
         rep=rep.reshape(rep.shape[0],-1)
         seq_rep,memory=self.seq_model(rep,terminations,last_memory)
-        actor_out=self.actor(seq_rep)
+        if self.continuous_actions:
+            act_mean = self.actor[0](seq_rep)
+            act_logstd = self.actor[1](seq_rep)
+            actor_out = (act_mean, act_logstd)
+        else:
+            actor_out=self.actor(seq_rep)
         critic_out=self.critic(seq_rep)
         return actor_out,critic_out,memory
 

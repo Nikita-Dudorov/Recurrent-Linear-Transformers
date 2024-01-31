@@ -1,5 +1,6 @@
 import jax
 import jax.numpy as jnp
+import jax.scipy as jsp
 import optax
 import rlax
 import tqdm
@@ -23,7 +24,7 @@ def numpy_to_jax(*args,dtype=jnp.float32):
 
 class BaseAgent:
     def __init__(self,train_envs,eval_env,rollout_len,repr_model_fn:Callable,seq_model_fn:Callable,
-                        actor_fn:Callable,critic_fn:Callable,use_gumbel_sampling=False,sequence_length=None) -> None:
+                        actor_fn:Callable,critic_fn:Callable,use_gumbel_sampling=False,sequence_length=None,continuous_actions=False) -> None:
         self.env=train_envs
         self.eval_env=eval_env
         self.rollout_len=rollout_len
@@ -33,10 +34,11 @@ class BaseAgent:
             assert rollout_len%sequence_length==0 
             self.sequence_length=sequence_length
         self.seq_fn,self.seq_init=seq_model_fn
+        self.continuous_actions=continuous_actions
         self.use_gumbel_sampling=use_gumbel_sampling
         self.ac_model=nn.vmap(ActorCriticModel,
                               variable_axes={'params': None},
-                                split_rngs={'params': False})(repr_model_fn,self.seq_fn,actor_fn,critic_fn)
+                                split_rngs={'params': False})(repr_model_fn,self.seq_fn,actor_fn,critic_fn,self.continuous_actions)
         
         @jax.jit
         def actor_critic_fn(random_key,params,inputs,terminations,last_memory):
@@ -51,8 +53,8 @@ class BaseAgent:
             Returns:
                 _type_: _description_
             """
-            act_logits,values,memory=self.ac_model.apply(params,inputs,terminations,last_memory,rngs={'random':random_key})
-            return act_logits,values,memory
+            actor_out,values,memory=self.ac_model.apply(params,inputs,terminations,last_memory,rngs={'random':random_key})
+            return actor_out,values,memory
         
         self.actor_critic_fn=actor_critic_fn
     
@@ -133,15 +135,21 @@ class BaseAgent:
                 hidden_indices.append(jnp.repeat(jnp.arange(t,t+self.sequence_length).reshape(1,-1),repeats=self.env.num_envs,axis=0))
             
 
-            act_logits,v_tick,htick=self.actor_critic_fn(model_key,self.params,jnp.expand_dims(o_tick,1),jnp.expand_dims(term_tick,1),
-                                                         h_tickminus1)
-            if self.use_gumbel_sampling:
-                # sample action: Gumbel-softmax trick
-                # see https://stats.stackexchange.com/questions/359442/sampling-from-a-categorical-distribution
-                u = jax.random.uniform(random_key, shape=act_logits.shape)
-                acts_tick=jnp.argmax(act_logits - jnp.log(-jnp.log(u)), axis=-1).squeeze(axis=-1)
+            actor_out,v_tick,htick=self.actor_critic_fn(model_key,self.params,jnp.expand_dims(o_tick,1),jnp.expand_dims(term_tick,1),h_tickminus1)
+            if self.continuous_actions:
+                act_mean, act_logstd = actor_out
+                acts_tick = jax.random.normal(random_key, shape=act_mean.shape) * act_logstd.exp() + act_mean
+                act_logits = jsp.stats.norm.logpdf(acts_tick, loc=act_mean, scale=act_logstd.exp()).sum(-1)  # suppose independent action components -> summation over action dim
             else:
-                acts_tick=jax.random.categorical(random_key,act_logits).squeeze(axis=-1)
+                act_logits = actor_out
+            if not self.continuous_actions:
+                if self.use_gumbel_sampling:
+                    # sample action: Gumbel-softmax trick
+                    # see https://stats.stackexchange.com/questions/359442/sampling-from-a-categorical-distribution
+                    u = jax.random.uniform(random_key, shape=act_logits.shape)
+                    acts_tick=jnp.argmax(act_logits - jnp.log(-jnp.log(u)), axis=-1).squeeze(axis=-1)
+                else:
+                    acts_tick=jax.random.categorical(random_key,act_logits).squeeze(axis=-1)
             #Take a step in the environment
             o_tickplus1,r_tickplus1,term_tickplus1,trunc_tickplus1,info=self.env.step(*jax_to_numpy(acts_tick))
             o_tickplus1,r_tickplus1=numpy_to_jax(o_tickplus1,r_tickplus1)
@@ -191,9 +199,9 @@ class BaseAgent:
         #Get the hidden state from the first actor
         o_tick,_=self.eval_env.reset()
         episode_lens=[]
-        episode_avgreturns=[]
+        episode_disc_returns=[]
         episode_scores=[]
-        rollouts=[]
+        episode_rollouts=[]
         term_tick=jnp.zeros((1,1),dtype=bool)  #Initialize terminal state to False
         #Initialize zero hidden state at the start of each episode, shape is infered from the hidden state of the first environment
         h_tickminus1=jax.tree_map(lambda x:jnp.expand_dims(jnp.zeros(x[0].shape),0) ,self.h_tickminus1)
@@ -204,17 +212,24 @@ class BaseAgent:
             while not done:
                 #Take a step in the environment
                 random_key,model_key=jax.random.split(random_key)
-                act_logits,v_tick,htick=self.actor_critic_fn(model_key,self.params,jnp.expand_dims(o_tick,axis=(0,1)),term_tick,h_tickminus1)
-                if hasattr(self,'arg_max') and self.arg_max:
-                    acts_tick=jnp.argmax(act_logits,axis=-1)
+                actor_out,v_tick,htick=self.actor_critic_fn(model_key,self.params,jnp.expand_dims(o_tick,axis=(0,1)),term_tick,h_tickminus1)
+                if self.continuous_actions:
+                    act_mean, act_logstd = actor_out
+                    acts_tick = jax.random.normal(random_key, shape=act_mean.shape) * act_logstd.exp() + act_mean
+                    act_logits = jsp.stats.norm.logpdf(acts_tick, loc=act_mean, scale=act_logstd.exp()).sum(-1)  # suppose independent action components -> summation over action dim
                 else:
-                    if self.use_gumbel_sampling:
-                         # sample action: Gumbel-softmax trick
-                        # see https://stats.stackexchange.com/questions/359442/sampling-from-a-categorical-distribution
-                        u = jax.random.uniform(random_key, shape=act_logits.shape)
-                        acts_tick=jnp.argmax(act_logits - jnp.log(-jnp.log(u)), axis=-1).squeeze(axis=-1)
+                    act_logits = actor_out
+                if not self.continuous_actions:
+                    if hasattr(self,'arg_max') and self.arg_max:
+                        acts_tick=jnp.argmax(act_logits,axis=-1)
                     else:
-                        acts_tick=jax.random.categorical(random_key,act_logits).squeeze(axis=-1)
+                        if self.use_gumbel_sampling:
+                            # sample action: Gumbel-softmax trick
+                            # see https://stats.stackexchange.com/questions/359442/sampling-from-a-categorical-distribution
+                            u = jax.random.uniform(random_key, shape=act_logits.shape)
+                            acts_tick=jnp.argmax(act_logits - jnp.log(-jnp.log(u)), axis=-1).squeeze(axis=-1)
+                        else:
+                            acts_tick=jax.random.categorical(random_key,act_logits).squeeze(axis=-1)
                 o_tick,r_tick,term,trunc,info=self.eval_env.step(*jax_to_numpy(acts_tick))
                 o_tick,r_tick=numpy_to_jax(o_tick,r_tick)
                 done=term or trunc
@@ -222,20 +237,17 @@ class BaseAgent:
                 rewards.append(r_tick)
                 h_tickminus1=htick
             #Get the rollout frames
-            rollouts.append(info['frames'])
+            episode_rollouts.append(info.get('frames', None))
             episode_lens.append(len(rewards))
             rewards=jnp.array(rewards,dtype=jnp.float32)
-            avg_return=rlax.discounted_returns(rewards,self.gamma*jnp.ones_like(rewards),jnp.zeros_like(rewards)).mean()
-            episode_avgreturns.append(avg_return)
+            disk_return=rlax.discounted_returns(rewards,self.gamma*jnp.ones_like(rewards),jnp.zeros_like(rewards)).mean()
+            episode_disc_returns.append(disk_return)
             score = info['success'] if 'success' in info else rewards.sum()
             episode_scores.append(score)
-        avg_episode_len=jnp.array(episode_lens).mean()
-        avg_episode_return=jnp.array(episode_avgreturns).mean()
-        avg_episode_score=jnp.array(episode_scores).mean()
         eval_info = {
-            'avg_episode_len': avg_episode_len,
-            'avg_episode_return': avg_episode_return,
-            'avg_episode_score': avg_episode_score,
-            'rollouts': rollouts,
+            'episode_disc_returns': jnp.array(episode_disc_returns),
+            'episode_lens': jnp.array(episode_lens),
+            'episode_scores': jnp.array(episode_scores),
+            'episode_rollouts': episode_rollouts,
         }
         return eval_info
