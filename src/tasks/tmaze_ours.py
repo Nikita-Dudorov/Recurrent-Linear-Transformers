@@ -256,14 +256,16 @@ if __name__ == "__main__":
     goal_reward = 4
     goal_penalty = 1
     timestep_penalty = 0.1
+    seed = 123
     env = TMazeOurs(
         episode_length=episode_length, 
         corridor_length=corridor_length,
         goal_reward=goal_reward,
         goal_penalty=goal_penalty,
         timestep_penalty=timestep_penalty,
+        seed=None,
     )
-    s0, info0 = env.reset(seed=None)
+    s0, info0 = env.reset(seed=seed)
     x0 = env.x
     cue = s0[1]
     done = False
