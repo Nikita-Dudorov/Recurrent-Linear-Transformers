@@ -68,7 +68,9 @@ class ControlTrainer(BaseTrainer):
             logger.info('Using sync env')
             env_type=gym.vector.SyncVectorEnv
             train_envs=env_type([lambda: EpisodeStatisticsWrapper(AutoResetWrapper((env_fn())))for seed in train_seeds])
-        eval_env=RecordRollout(AutoResetWrapper(eval_env_fn()))
+        eval_env = AutoResetWrapper(eval_env_fn())
+        if self.global_config.get("videos", False):
+            eval_env = RecordRollout(eval_env)
         train_envs.reset(seed=train_seeds)
         eval_env.reset(seed=eval_seeds)
         logger.info("Observation space: "+str(eval_env.observation_space))
@@ -89,7 +91,10 @@ class ControlTrainer(BaseTrainer):
         elif self.trainer_config.seq_model.name=='arelit':
             model_fn=seq_model_arelit(**self.trainer_config['seq_model'],seed=kwargs['seed'])
 
-        actor_fn=actor_model_discete(self.trainer_config['d_actor'],eval_env.action_space.n)
+        if self.global_config.get("continuous_actions", False):
+            actor_fn=actor_model_continuous(self.trainer_config['d_actor'],eval_env.action_space.n)
+        else:
+            actor_fn=actor_model_discete(self.trainer_config['d_actor'],eval_env.action_space.n)
         critic_fn=critic_model(self.trainer_config['d_critic'])
         #Setup optimizer
         
@@ -182,17 +187,41 @@ class ControlTrainer(BaseTrainer):
         #Checkpointing code
         self.checkpoint_dir=os.path.abspath(os.path.join(self.global_config.get('save_dir','./'),self.save_tag))
         ckpt_exists=os.path.exists(self.checkpoint_dir)
-        if (self.save_interval is not None) and (not os.path.exists(self.checkpoint_dir)):
+        if (self.save_interval is not None) and (not ckpt_exists):
             os.makedirs(self.checkpoint_dir)
             orbax_checkpointer = orbax.checkpoint.PyTreeCheckpointer()
             options = orbax.checkpoint.CheckpointManagerOptions(max_to_keep=2, create=True)
             self.manager = orbax.checkpoint.CheckpointManager(self.checkpoint_dir, orbax_checkpointer,options)
         #Restore from checkpoint if true)
         if ckpt_exists and self.global_config.get('restore',False):
+            orbax_checkpointer = orbax.checkpoint.PyTreeCheckpointer()
+            options = orbax.checkpoint.CheckpointManagerOptions(max_to_keep=2, create=False)
+            self.manager = orbax.checkpoint.CheckpointManager(self.checkpoint_dir, orbax_checkpointer,options)
             self.restore_checkpoint()
 
     def step(self, **kwargs):
         self.random_key=jax.random.split(self.random_key)[0]
+
+        # hard code for evaluate-only case
+        if self.global_config.get('eval_only', False):
+            eval_info = self.agent.evaluate(self.random_key,self.global_config['eval_episodes'])
+            episode_lens = eval_info['episode_lens']
+            episode_disc_returns = eval_info['episode_disc_returns']
+            episode_scores = eval_info['episode_scores']
+            metrics={}
+            metrics['eval/episode_len_mean']=float(episode_lens.mean())
+            metrics['eval/episode_len_std']=float(episode_lens.std())
+            metrics['eval/episode_disc_return_mean']=float(episode_disc_returns.mean())
+            metrics['eval/episode_disc_return_std']=float(episode_disc_returns.std())
+            metrics['eval/episode_score_mean']=float(episode_scores.mean())
+            metrics['eval/episode_score_std']=float(episode_scores.std())
+            if self.global_config.get("videos", False):
+                episode_rollouts = eval_info['episode_rollouts']
+                episode_rollouts=np.concatenate(episode_rollouts, axis=0)
+                metrics['eval/episode_rollouts']=wandb.Video(episode_rollouts, fps=self.global_config.get('record_fps',5), format="gif")
+            loss = 0
+            step = self.global_config['steps']
+            return loss, metrics, step
 
         #Measure steps per second
         start_time=time.time()
@@ -266,18 +295,22 @@ class ControlTrainer(BaseTrainer):
         if self.eval_interval is not None and self.step_count>=self.next_eval_step:
             self.next_eval_step+=self.eval_interval
             eval_info = self.agent.evaluate(self.random_key,self.global_config['eval_episodes'])
-            avg_episode_len = eval_info['avg_episode_len']
-            avg_episode_return = eval_info['avg_episode_return']
-            avg_episode_score = eval_info['avg_episode_score']
-            rollouts = eval_info['rollouts']
-            rollouts=np.concatenate(rollouts,axis=0)
+            episode_lens = eval_info['episode_lens']
+            episode_disc_returns = eval_info['episode_disc_returns']
+            episode_scores = eval_info['episode_scores']
             if metrics is None:
                 metrics={}
             metrics['step']=self.step_count
-            metrics['eval_avg_episode_len']=float(avg_episode_len)
-            metrics['eval_avg_episode_return']=float(avg_episode_return)
-            metrics['eval_avg_episode_score']=float(avg_episode_score)
-            metrics['rollouts']=wandb.Video(rollouts, fps=self.global_config.get('record_fps',5), format="gif")
+            metrics['eval/episode_len_mean']=float(episode_lens.mean())
+            metrics['eval/episode_len_std']=float(episode_lens.std())
+            metrics['eval/episode_disc_return_mean']=float(episode_disc_returns.mean())
+            metrics['eval/episode_disc_return_std']=float(episode_disc_returns.std())
+            metrics['eval/episode_score_mean']=float(episode_scores.mean())
+            metrics['eval/episode_score_std']=float(episode_scores.std())
+            if self.global_config.get("videos", False):
+                episode_rollouts = eval_info['episode_rollouts']
+                episode_rollouts=np.concatenate(episode_rollouts, axis=0)
+                metrics['eval/episode_rollouts']=wandb.Video(episode_rollouts, fps=self.global_config.get('record_fps',5), format="gif")
         if self.save_interval is not None and self.step_count>=self.next_save_step:
             self.next_save_step+=self.save_interval
             logger.info('Saving checkpoint at step '+str(self.step_count)+' to '+self.checkpoint_dir)
