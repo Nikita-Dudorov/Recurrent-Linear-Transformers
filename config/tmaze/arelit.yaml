@@ -1,16 +1,17 @@
 # @package _global_
-tags: ["tmaze-ours"]
+tags: ["tmaze-ours, "eval_checkpoint-160"]
 project_name: "ReLiT"
 seed: 1
 steps: 5000000
 log_interval: 10000
-# eval_interval: 500000
-# eval_episodes: 100
-# eval_only: false
-# save_interval: 500000
-# save_dir: "./checkpoints"
-# save_tag: "arelit_tmaze-paper_l-160_g-4-1_t-01"
-# restore: false
+eval_interval: 500000
+eval_episodes: 100
+eval_only: true
+videos: true
+save_interval: 500000
+save_dir: "./checkpoints"
+save_tag: "arelit_tmaze-ours_l-160_g-4-1_t-01"
+restore: true
 # task: 
 #   task: "tmazev2"
 #   max_episode_steps: 1000
