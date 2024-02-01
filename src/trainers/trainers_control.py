@@ -31,8 +31,9 @@ def get_env_initializers(env_config):
     env_config=OmegaConf.to_container(env_config)
     if env_config['task']=='tmazev2':
         env_fn=lambda: create_tmazev2(**env_config)
+        eval_env_fn=lambda: create_tmazev2(**env_config)
         repr_fn=flatten_repr_model()
-        return env_fn,env_fn,repr_fn
+        return env_fn,eval_env_fn,repr_fn
     elif env_config['task']=='tmaze_ours':
         env_fn=lambda: create_tmaze_ours(**env_config)
         eval_env_fn=lambda: create_tmaze_ours(**env_config)
@@ -40,8 +41,8 @@ def get_env_initializers(env_config):
         return env_fn,eval_env_fn,repr_fn
     elif env_config['task']=='memory_gym':
         env_fn=lambda: create_memorygym_env(env_config['env_name'])
-        repr_fn=atari_conv_repr_model()
         eval_env_fn=lambda: create_memorygym_env(env_config['env_name'])
+        repr_fn=atari_conv_repr_model()
         return env_fn,eval_env_fn,repr_fn
     elif env_config['task']=='mujoco':
         env_fn=lambda: create_mujoco_env(env_config['env_name'])

@@ -138,8 +138,10 @@ class BaseAgent:
             actor_out,v_tick,htick=self.actor_critic_fn(model_key,self.params,jnp.expand_dims(o_tick,1),jnp.expand_dims(term_tick,1),h_tickminus1)
             if self.continuous_actions:
                 act_mean, act_logstd = actor_out
-                acts_tick = jax.random.normal(random_key, shape=act_mean.shape) * act_logstd.exp() + act_mean
-                act_logits = jsp.stats.norm.logpdf(acts_tick, loc=act_mean, scale=act_logstd.exp()).sum(-1)  # suppose independent action components -> summation over action dim
+                act_mean = act_mean.squeeze()
+                act_std = jnp.exp(act_logstd.squeeze())
+                acts_tick = jax.random.normal(random_key, shape=act_mean.shape) * act_std + act_mean
+                act_logits = jsp.stats.norm.logpdf(acts_tick, loc=act_mean, scale=act_std).sum(-1)  # suppose independent action components -> summation over action dim
             else:
                 act_logits = actor_out
             if not self.continuous_actions:
@@ -215,8 +217,10 @@ class BaseAgent:
                 actor_out,v_tick,htick=self.actor_critic_fn(model_key,self.params,jnp.expand_dims(o_tick,axis=(0,1)),term_tick,h_tickminus1)
                 if self.continuous_actions:
                     act_mean, act_logstd = actor_out
-                    acts_tick = jax.random.normal(random_key, shape=act_mean.shape) * act_logstd.exp() + act_mean
-                    act_logits = jsp.stats.norm.logpdf(acts_tick, loc=act_mean, scale=act_logstd.exp()).sum(-1)  # suppose independent action components -> summation over action dim
+                    act_mean = act_mean.squeeze()
+                    act_std = jnp.exp(act_logstd.squeeze())
+                    acts_tick = jax.random.normal(random_key, shape=act_mean.shape) * act_std + act_mean
+                    act_logits = jsp.stats.norm.logpdf(acts_tick, loc=act_mean, scale=act_std).sum(-1)  # suppose independent action components -> summation over action dim
                 else:
                     act_logits = actor_out
                 if not self.continuous_actions:

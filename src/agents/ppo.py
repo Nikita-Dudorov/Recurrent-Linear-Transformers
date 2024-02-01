@@ -68,9 +68,12 @@ class PPOAgent(BaseAgent):
             #Calculate the advantages using timesteps {tick} - {tick+rollout_len}
             advantages=Glambdas-critic_preds[:,:-1]
             #Calculate log probs shape (num_envs*rollout_len,num_actions)
-            B,T=actions.shape
-            logprobs=jax.nn.log_softmax(actor_preds).reshape(B*T,-1)
-            logprobs=logprobs[jnp.arange(B*T),actions.reshape(-1)].reshape(B,T)
+            B,T=actions.shape[:2]
+            if self.continuous_actions:
+                logprobs=actor_preds
+            else:
+                logprobs=jax.nn.log_softmax(actor_preds).reshape(B*T,-1)
+                logprobs=logprobs[jnp.arange(B*T),actions.reshape(-1)].reshape(B,T)
             #Calculate log probs of actions takenß
             
             
@@ -79,19 +82,26 @@ class PPOAgent(BaseAgent):
                 if self.continuous_actions:
                     actor_out_new,values_new,_=self.actor_critic_fn(random_key,params,mb_observations,mb_terminations,mb_h_tickminus1)
                     act_mean_new, act_logstd_new = actor_out_new
-                    actions_new = jax.random.normal(random_key, shape=act_mean_new.shape) * act_logstd_new.exp() + act_mean_new
-                    logits_new = jsp.stats.norm.logpdf(actions_new, loc=act_mean_new, scale=act_logstd_new.exp()).sum(-1)  # suppose independent action components -> summation over action dim
+                    act_mean_new = act_mean_new.squeeze()
+                    act_std_new = jnp.exp(act_logstd_new.squeeze())
+                    actions_new = (jax.random.normal(random_key, shape=act_mean_new.shape) * act_std_new) + act_mean_new
+                    # suppose independent action components -> summation over action dim
+                    logits_new = jsp.stats.norm.logpdf(actions_new, loc=act_mean_new, scale=act_std_new).sum(-1)  
+                    entropy = jnp.log(jnp.sqrt(2*jnp.pi*jnp.e) * act_std_new).sum(-1)
                 else:    
                     logits_new,values_new,_=self.actor_critic_fn(random_key,params,mb_observations,mb_terminations,mb_h_tickminus1)
                 #newlogprob, entropy, newvalue = get_action_and_value2(random_key,params, x, a)
-                B,T=mb_actions.shape
-                newlogprobs=jax.nn.log_softmax(logits_new).reshape(B*T,-1)
-                newlogprobs=newlogprobs[jnp.arange(B*T),mb_actions.reshape(-1)].reshape(B,T)
-                # normalize the logits https://gregorygundersen.com/blog/2020/02/09/log-sum-exp/
-                logits_new = logits_new - jax.scipy.special.logsumexp(logits_new, axis=-1, keepdims=True)
-                logits_new = logits_new.clip(min=jnp.finfo(logits_new.dtype).min)
-                p_log_p = logits_new * jax.nn.softmax(logits_new)
-                entropy = -p_log_p.sum(-1)
+                B,T=mb_actions.shape[:2]
+                if self.continuous_actions:
+                    newlogprobs = logits_new
+                else:
+                    newlogprobs=jax.nn.log_softmax(logits_new).reshape(B*T,-1)
+                    newlogprobs=newlogprobs[jnp.arange(B*T),mb_actions.reshape(-1)].reshape(B,T)
+                    # normalize the logits https://gregorygundersen.com/blog/2020/02/09/log-sum-exp/
+                    logits_new = logits_new - jsp.special.logsumexp(logits_new, axis=-1, keepdims=True)
+                    logits_new = logits_new.clip(min=jnp.finfo(logits_new.dtype).min)
+                    p_log_p = logits_new * jax.nn.softmax(logits_new)
+                    entropy = -p_log_p.sum(-1)
 
                 logratio = newlogprobs - mb_logp
                 ratio = jnp.exp(logratio)
