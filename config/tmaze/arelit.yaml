@@ -1,5 +1,5 @@
 # @package _global_
-tags: ["tmaze-ours, "eval_checkpoint-160"]
+tags: ["tmaze-ours", "eval_checkpoint-160"]
 project_name: "ReLiT"
 seed: 1
 steps: 5000000
@@ -7,7 +7,8 @@ log_interval: 10000
 eval_interval: 500000
 eval_episodes: 100
 eval_only: true
-videos: true
+videos: false
+record_fps: 5
 save_interval: 500000
 save_dir: "./checkpoints"
 save_tag: "arelit_tmaze-ours_l-160_g-4-1_t-01"
@@ -21,7 +22,7 @@ restore: true
 task: 
   task: "tmaze_ours"
   max_episode_steps: 1000
-  corridor_len: 160
+  corridor_len: 800
   goal_reward: 4
   goal_penalty: 1
   timestep_penalty: 0.1

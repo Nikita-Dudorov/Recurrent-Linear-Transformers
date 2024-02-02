@@ -41,6 +41,7 @@ def main(config: DictConfig):
         'memory_maze':ControlTrainer,
         'procgen':ControlTrainer,
         'mujoco':ControlTrainer,
+        'memorymaze':ControlTrainer,
     }
 
 

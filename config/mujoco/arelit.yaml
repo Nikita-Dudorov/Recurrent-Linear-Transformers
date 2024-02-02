@@ -8,9 +8,10 @@ log_interval: 10000
 # eval_episodes: 100
 # eval_only: false
 # videos: false
+# record_fps: 30
 # save_interval: 500000
 # save_dir: "./checkpoints"
-# save_tag: "arelit_half-cheetah"
+# save_tag: "arelit_half-cheetah-v4"
 continuous_actions: true
 task: 
   task: "mujoco"
@@ -30,17 +31,17 @@ trainer:
     eta: 4
     r: 2
     reset_hidden_on_terminate: true
-  env_pool: async #Use synchronous vector env because memory gym doesn't play well with Gymnasium Vec Env
+  env_pool: async
   d_actor: 256
   d_critic: 256
-  num_envs: 128
-  rollout_len: 128
+  num_envs: 8
+  rollout_len: 1024
   sequence_length: null
-  anneal_lr: false
+  anneal_lr: true
   gamma: 0.99
   gae_lambda: 0.95
-  num_minibatches: 8
-  update_epochs: 3
+  num_minibatches: 4
+  update_epochs: 10
   norm_adv: true
   clip_coef: 0.2
   ent_coef: 
@@ -49,7 +50,7 @@ trainer:
     max_decay_steps: 10000
     power: 1
   vf_coef: 0.5
-  max_grad_norm: 5.0
+  max_grad_norm: 0.1
   optimizer: 
     learning_rate: 
       initial: 0.00025

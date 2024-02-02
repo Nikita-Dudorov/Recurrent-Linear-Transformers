@@ -15,6 +15,7 @@ from src.trainers.base_trainer import BaseTrainer
 from src.tasks.tmaze import create_tmazev2, create_tmaze_ours
 from src.tasks.memory_gym_env import  create_memorygym_env
 from src.tasks.mujoco_env import create_mujoco_env
+from src.tasks.memorymaze import create_memorymaze
 from src.agents.a2c import A2CAgent
 from src.agents.ppo import PPOAgent
 from src.model_fns import *
@@ -48,6 +49,11 @@ def get_env_initializers(env_config):
         env_fn=lambda: create_mujoco_env(env_config['env_name'])
         eval_env_fn=lambda: create_mujoco_env(env_config['env_name'])
         repr_fn=flatten_repr_model()
+        return env_fn,eval_env_fn,repr_fn
+    elif env_config['task']=='memorymaze':
+        env_fn=lambda: create_memorymaze(env_config['env_name'])
+        eval_env_fn=lambda: create_memorymaze(env_config['env_name'])
+        repr_fn=atari_conv_repr_model()
         return env_fn,eval_env_fn,repr_fn
 
 
