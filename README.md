@@ -19,7 +19,6 @@ Install Weights and Biases for logging from https://docs.wandb.ai/quickstart.
 ```
 $ pip install memory-maze gym
 $ conda install -c conda-forge mesalib
-$ export PYOPENGL_PLATFORM=osmesa
 $ export MUJOCO_GL=osmesa
 >>> import gym
 >>> env = gym.make('memory_maze:MemoryMaze-15x15-v0')
