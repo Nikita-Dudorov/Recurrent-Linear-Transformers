@@ -76,8 +76,8 @@ class ControlTrainer(BaseTrainer):
         eval_seeds=int(np.random.randint(0,9999,size=1,dtype=int))
         env_type=kwargs['trainer_config'].get('env_pool','async')
         if env_type=='async':
-            env_type=gym.vector.AsyncVectorEnv
             logger.info('Using async env')
+            env_type=gym.vector.AsyncVectorEnv
             train_envs=env_type([lambda: EpisodeStatisticsWrapper(AutoResetWrapper((env_fn())))for seed in train_seeds],shared_memory=True)
         elif env_type=='sync':
             logger.info('Using sync env')

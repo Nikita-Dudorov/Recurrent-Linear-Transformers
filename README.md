@@ -17,7 +17,8 @@ Install Weights and Biases for logging from https://docs.wandb.ai/quickstart.
 
 ## To use Memory Maze environment on headless machine:
 ```
-$ pip install memory-maze gym
+$ pip install memory-maze
+$ pip install PyOpenGL-accelerate
 $ conda install -c conda-forge mesalib
 $ export MUJOCO_GL=osmesa
 >>> import gym
