@@ -23,7 +23,7 @@ class PPOAgent(BaseAgent):
                         actor_fn:Callable,critic_fn:Callable,optimizer:optax.GradientTransformation,
                          num_steps=128, anneal_lr=True, gamma=0.99, lr_schedule=optax.linear_schedule,
                         gae_lambda=0.95, num_minibatches=4, update_epochs=4, norm_adv=True,
-                        clip_coef=0.1, ent_schedule=optax.Schedule, vf_coef=0.5, max_grad_norm=0.5,
+                        clip_coef=0.1, value_clip_coef=0.0, ent_schedule=optax.Schedule, vf_coef=0.5, max_grad_norm=0.5,
                         target_kl=None,sequence_length=None,continuous_actions=False) -> None:
 
         super(PPOAgent,self).__init__(train_envs=train_envs,eval_env=eval_env,rollout_len=num_steps,repr_model_fn=repr_model_fn,seq_model_fn=seq_model_fn,
@@ -39,6 +39,7 @@ class PPOAgent(BaseAgent):
         self.update_epochs = update_epochs
         self.norm_adv = norm_adv
         self.clip_coef = clip_coef
+        self.value_clip_coef = value_clip_coef
         self.ent_schedule = ent_schedule
         self.vf_coef = vf_coef
         self.max_grad_norm = max_grad_norm
@@ -116,6 +117,8 @@ class PPOAgent(BaseAgent):
                 pg_loss = jnp.maximum(pg_loss1, pg_loss2).mean()
 
                 # Value loss
+                if self.value_clip_coef != 0:
+                    values_new = mb_returns + jnp.clip(values_new - mb_returns, -self.value_clip_coef, self.value_clip_coef)
                 v_loss = 0.5 * ((values_new - mb_returns) ** 2).mean()
 
                 entropy_loss = entropy.mean()
