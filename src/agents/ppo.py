@@ -79,8 +79,8 @@ class PPOAgent(BaseAgent):
             
             def ppo_loss(params, random_key, mb_observations, mb_actions,mb_terminations,
                             mb_logp, mb_advantages, mb_returns,mb_h_tickminus1):
+                actor_out_new, values_new, _ = self.actor_critic_fn(random_key,params,mb_observations,mb_terminations,mb_h_tickminus1)
                 if self.continuous_actions:
-                    actor_out_new,values_new,_=self.actor_critic_fn(random_key,params,mb_observations,mb_terminations,mb_h_tickminus1)
                     act_mean_new, act_logstd_new = actor_out_new
                     act_mean_new = act_mean_new.squeeze()
                     act_std_new = jnp.exp(act_logstd_new.squeeze())
@@ -89,7 +89,7 @@ class PPOAgent(BaseAgent):
                     logits_new = jsp.stats.norm.logpdf(actions_new, loc=act_mean_new, scale=act_std_new).sum(-1)  
                     entropy = jnp.log(jnp.sqrt(2*jnp.pi*jnp.e) * act_std_new).sum(-1)
                 else:    
-                    logits_new,values_new,_=self.actor_critic_fn(random_key,params,mb_observations,mb_terminations,mb_h_tickminus1)
+                    logits_new = actor_out_new
                 #newlogprob, entropy, newvalue = get_action_and_value2(random_key,params, x, a)
                 B,T=mb_actions.shape[:2]
                 if self.continuous_actions:
