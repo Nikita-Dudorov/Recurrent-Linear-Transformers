@@ -146,7 +146,6 @@ class ControlTrainer(BaseTrainer):
             self.agent=PPOAgent(train_envs=train_envs,eval_env=eval_env,optimizer=self.optimizer, repr_model_fn=repr_fn,
                                 seq_model_fn=model_fn,actor_fn=actor_fn,critic_fn=critic_fn,
                                 num_steps=self.rollout_len,
-                                anneal_lr=self.trainer_config.get('anneal_lr', True),
                                 gamma=self.trainer_config.get('gamma', 0.99),
                                 gae_lambda=self.trainer_config.get('gae_lambda', 0.95),
                                 num_minibatches=self.trainer_config.get('num_minibatches', 4),

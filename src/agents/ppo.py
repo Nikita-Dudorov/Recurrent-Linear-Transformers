@@ -21,7 +21,7 @@ class PPOAgent(BaseAgent):
 
     def __init__(self,train_envs,eval_env,repr_model_fn:Callable,seq_model_fn:Tuple[Callable,Callable],
                         actor_fn:Callable,critic_fn:Callable,optimizer:optax.GradientTransformation,
-                         num_steps=128, anneal_lr=True, gamma=0.99, lr_schedule=optax.linear_schedule,
+                        num_steps=128, gamma=0.99, lr_schedule=optax.linear_schedule,
                         gae_lambda=0.95, num_minibatches=4, update_epochs=4, norm_adv=True,
                         clip_coef=0.1, value_clip_coef=None, ent_schedule=optax.Schedule, vf_coef=0.5, max_grad_norm=0.5,
                         target_kl=None,sequence_length=None,continuous_actions=False) -> None:
@@ -31,7 +31,6 @@ class PPOAgent(BaseAgent):
         
         self.optimizer=optimizer
         self.num_envs = self.env.num_envs
-        self.anneal_lr = anneal_lr
         self.gamma = gamma
         self.lr_schedule = lr_schedule
         self.gae_lambda = gae_lambda

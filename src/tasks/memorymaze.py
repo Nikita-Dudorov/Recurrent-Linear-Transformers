@@ -1,6 +1,7 @@
 import gymnasium as gym
 import os
 
+# to enable rendering on a headless machine
 os.environ['MUJOCO_GL']='osmesa'
 
 class FrameProcessing(gym.Wrapper):
