@@ -1,13 +1,11 @@
-program: trainer.py
+# program: sweeper.py
 method: random
 metric:
   goal: maximize
   name: reward_per_episode
 parameters:
-  use_wandb:
-    value: true
   tags: 
-    value: HalfCheetah-v4
+    value: [HalfCheetah-v4]
   project_name: 
     value: ReLiT
   seed: 
@@ -64,8 +62,6 @@ parameters:
         values: [128, 512, 2048]
       sequence_length: 
         value: null
-      anneal_lr: 
-        value: true
       gamma: 
         value: 0.99
       gae_lambda: 
