@@ -22,8 +22,6 @@ parameters:
         value: mujoco
       env_name: 
         value: HalfCheetah-v4
-      max_episode_steps: 
-        value: 1000
       seed: 
         value: null
   trainer:

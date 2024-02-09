@@ -1,14 +1,17 @@
 # @package _global_
-tags: null
-project_name: "MPGrid"
+tags: ["MysteryPath"]
+project_name: "ReLiT"
 seed: 1
 steps: 150000000
 log_interval: 10000
 record_fps: 5
 eval_episodes: 2
-eval_interval: null
+eval_interval: 5000000
+videos: false
 save_dir: './checkpoints'
-save_interval: null
+save_tag: "arelit_mysterypath"
+save_interval: 5000000
+restore: true
 task: 
   task: memory_gym
   env_name: MysteryPath-Grid-Easy-v0
