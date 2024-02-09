@@ -207,7 +207,7 @@ class ControlTrainer(BaseTrainer):
             orbax_checkpointer = orbax.checkpoint.PyTreeCheckpointer()
             options = orbax.checkpoint.CheckpointManagerOptions(max_to_keep=2, create=True)
             self.manager = orbax.checkpoint.CheckpointManager(self.checkpoint_dir, orbax_checkpointer,options)
-        #Restore from checkpoint if true)
+        #Restore from checkpoint if true
         if ckpt_exists and self.global_config.get('restore',False):
             orbax_checkpointer = orbax.checkpoint.PyTreeCheckpointer()
             options = orbax.checkpoint.CheckpointManagerOptions(max_to_keep=2, create=False)
