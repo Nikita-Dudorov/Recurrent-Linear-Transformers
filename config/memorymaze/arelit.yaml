@@ -4,7 +4,7 @@ project_name: "ReLiT"
 seed: 1
 steps: 100000000
 log_interval: 100000
-eval_interval: 10000000
+eval_interval: 5000000
 eval_episodes: 1
 # eval_only: false
 videos: true
@@ -16,7 +16,7 @@ restore: true
 task: 
   task: "memorymaze"
   env_name: "memory_maze:MemoryMaze-15x15-v0"
-  max_episode_steps: 4000
+  # max_episode_steps = 4000
   seed: null
 
 trainer:
@@ -37,7 +37,6 @@ trainer:
   num_envs: 64
   rollout_len: 200
   sequence_length: 100
-  anneal_lr: false
   gamma: 0.99
   gae_lambda: 0.95
   num_minibatches: 4  # num_envs*rollout_len / batch_size

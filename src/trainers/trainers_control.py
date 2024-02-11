@@ -53,7 +53,7 @@ def get_env_initializers(env_config):
     elif env_config['task']=='memorymaze':
         env_fn=lambda: create_memorymaze(env_config['env_name'])
         eval_env_fn=lambda: create_memorymaze(env_config['env_name'])
-        repr_fn=atari_conv_repr_model()
+        repr_fn=memorymaze_conv_repr_model()
         return env_fn,eval_env_fn,repr_fn
 
 
