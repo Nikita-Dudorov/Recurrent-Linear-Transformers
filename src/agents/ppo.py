@@ -87,7 +87,7 @@ class PPOAgent(BaseAgent):
                     actions_new = (jax.random.normal(random_key, shape=act_mean_new.shape) * act_std_new) + act_mean_new
                     # suppose independent action components -> summation over action dim
                     logits_new = jsp.stats.norm.logpdf(actions_new, loc=act_mean_new, scale=act_std_new).sum(-1)  
-                    entropy = jnp.log(jnp.sqrt(2*jnp.pi*jnp.e) * act_std_new).sum(-1)
+                    entropy = jnp.log(jnp.sqrt(2*jnp.pi*jnp.e) * act_std_new).sum(-1)  # entropy of normal distribution 
                 else:    
                     logits_new = actor_out_new
                 #newlogprob, entropy, newvalue = get_action_and_value2(random_key,params, x, a)
