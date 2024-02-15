@@ -1,5 +1,6 @@
 import jax
 import jax.numpy as jnp
+import jax.scipy as jsp
 import optax
 import rlax
 import tqdm
@@ -14,9 +15,9 @@ class A2CAgent(BaseAgent):
     def __init__(self,train_envs,eval_env,rollout_len,
                         repr_model_fn:Callable,seq_model_fn:Callable,
                         actor_fn:Callable,critic_fn:Callable,optimizer:optax.GradientTransformation,gamma:float=0.99,lamb:float=0.95,
-                        entropy_coef=0.01, value_loss_coef=0.5,arg_max=False) -> None:
+                        entropy_coef=0.01, value_loss_coef=0.5, arg_max=False, continuous_actions=False) -> None:
         super(A2CAgent,self).__init__(train_envs=train_envs,eval_env=eval_env,rollout_len=rollout_len,repr_model_fn=repr_model_fn,seq_model_fn=seq_model_fn,
-                        actor_fn=actor_fn,critic_fn=critic_fn)
+                        actor_fn=actor_fn,critic_fn=critic_fn, continuous_actions=continuous_actions)
         self.num_actors=self.env.num_envs
         self.gamma=gamma
         self.lamb=lamb
@@ -33,7 +34,15 @@ class A2CAgent(BaseAgent):
             gammas=self.gamma*(1-terminations)
             lambdas=self.lamb*jnp.ones(self.num_actors)
             #Cacluate the values and log likelihoods for the timesteps {tick} - {tick+rollout_len+1}
-            logits_diff,values_diff,_=self.actor_critic_fn(random_key,params,observations,terminations,h_tickminus1)
+            actor_out, values_diff, _ = self.actor_critic_fn(random_key,params,observations,terminations,h_tickminus1)
+            if self.continuous_actions:
+                act_mean, act_logstd = actor_out
+                act_mean = act_mean.squeeze()
+                act_std = jnp.exp(act_logstd.squeeze())
+                acts_tick = jax.random.normal(random_key, shape=act_mean.shape) * act_std + act_mean 
+                logits_diff = jsp.stats.norm.logpdf(acts_tick, loc=act_mean, scale=act_std).sum(-1)  # suppose independent action components -> summation over action dim
+            else:
+                logits_diff = actor_out
             #Calculate Lamba for timesteps G_{tick} - G_{tick+rollout_len} using 
             #rewards, gammas, lambdas values at timesteps {tick+1} - {tick+rollout_len+1}
             Glambdas=Glambda_fn(rewards[:,1:],gammas[:,1:],
@@ -42,11 +51,19 @@ class A2CAgent(BaseAgent):
             advantages=(jax.lax.stop_gradient(Glambdas)-values_diff[:,:-1])
             value_loss=(advantages**2).mean()
             #Calculate the actor loss using timesteps {tick} - {tick+rollout_len}
-            logits_diff=logits_diff[:,:-1]
-            actor_loss=pg_fn(logits_diff,actions,jax.lax.stop_gradient(advantages),
-                             jnp.ones((self.num_actors,self.rollout_len))).mean()
+            if self.continuous_actions:
+                logits_diff = logits_diff[:,:-1]
+                actor_loss = (-jax.lax.stop_gradient(advantages) * logits_diff).mean()
+            else:
+                logits_diff=logits_diff[:,:-1]
+                actor_loss=pg_fn(logits_diff,actions,jax.lax.stop_gradient(advantages),
+                                 jnp.ones((self.num_actors,self.rollout_len))).mean()
             #Calculate the entropy
-            entropy_loss=entropy_fn(logits_diff,jnp.ones((self.num_actors,self.rollout_len))).mean()
+            if self.continuous_actions:
+                act_std = act_std[:,:-1]
+                entropy_loss = jnp.log(jnp.sqrt(2*jnp.pi*jnp.e) * act_std).sum(-1).mean()  # entropy of normal distribution 
+            else:
+                entropy_loss=entropy_fn(logits_diff,jnp.ones((self.num_actors,self.rollout_len))).mean()
             
             loss=actor_loss+self.entropy_coef*entropy_loss+self.value_loss_coef*value_loss
             return loss,(value_loss,entropy_loss,actor_loss)       

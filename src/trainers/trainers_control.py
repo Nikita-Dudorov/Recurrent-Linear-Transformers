@@ -122,7 +122,8 @@ class ControlTrainer(BaseTrainer):
                                 gamma=self.trainer_config['gamma'],lamb=self.trainer_config['lamb'],
                                 value_loss_coef=self.trainer_config['value_coef'],
                                 entropy_coef=self.trainer_config['entropy_coef'],
-                                arg_max=self.trainer_config['arg_max'])
+                                arg_max=self.trainer_config.get('arg_max', False),
+                                continuous_actions=self.global_config.get("continuous_actions", False))
         elif self.trainer_config['agent']=='ppo':
             #Used from CleanRL PPO implementation
             batch_size = self.trainer_config['num_envs']*self.trainer_config['rollout_len'] 
