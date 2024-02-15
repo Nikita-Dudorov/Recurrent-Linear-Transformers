@@ -9,3 +9,5 @@ tqdm
 flax
 moviepy 
 imageio
+mujoco
+# memory-maze
