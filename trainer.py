@@ -38,7 +38,6 @@ def main(config: DictConfig):
         'tmaze_ours':ControlTrainer,
         'memory_gym':ControlTrainer,
         'popgym':ControlTrainer,
-        'memory_maze':ControlTrainer,
         'procgen':ControlTrainer,
         'mujoco':ControlTrainer,
         'memorymaze':ControlTrainer,
