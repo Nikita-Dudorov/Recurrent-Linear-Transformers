@@ -1,26 +1,17 @@
-import multiprocessing as mp
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import OmegaConf
 
 
 def main(config = None):
-    from cmath import isnan
     import sys
     sys.path.append('./')
     sys.path.append('../')
     import numpy as np
     import random
-    import json
-    import argparse
     import jax
-    import jax.numpy as jnp
-    import itertools
     from src.trainers.trainers_control import ControlTrainer
     from tqdm import tqdm
     import numpy as np
     
-    from concurrent.futures import ProcessPoolExecutor
-    from multiprocessing import Pool 
-    import multiprocessing as mp
     from tqdm.contrib.logging import logging_redirect_tqdm
     import logging
 
@@ -42,9 +33,8 @@ def main(config = None):
 
     logger.info("Available Backends:"+str(jax.devices()))
     with wandb.init(
-        settings=wandb.Settings(start_method="fork"),
         config=config,
-        mode='online'
+        mode='online',
     ):
         config = wandb.config
         config = OmegaConf.create(config.as_dict())
@@ -84,7 +74,6 @@ def main(config = None):
 
 
 if __name__=='__main__':
-    mp.set_start_method('forkserver')
     import wandb
     import yaml
     config_path = './config/mujoco/arelit_sweep.yaml'
@@ -92,6 +81,6 @@ if __name__=='__main__':
     with open(config_path, 'r') as stream:
         sweep_config = yaml.safe_load(stream)
     sweep_id = wandb.sweep(sweep_config, project=project)
-    wandb.agent(sweep_id, main, count=5)
+    wandb.agent(sweep_id, main, count=8)
 
     
