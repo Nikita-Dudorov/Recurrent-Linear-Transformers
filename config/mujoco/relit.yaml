@@ -18,7 +18,6 @@ task:
   task: "mujoco"
   env_name: "HalfCheetah-v4"
   # max_episode_steps = 1000
-  seed: null
 
 trainer:
   agent: a2c

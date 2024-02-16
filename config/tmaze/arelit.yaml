@@ -1,18 +1,18 @@
 # @package _global_
-tags: ["tmaze-ours", "eval_checkpoint-160"]
+tags: ["tmaze-ours"]
 project_name: "ReLiT"
 seed: 1
 steps: 5000000
 log_interval: 10000
 eval_interval: 500000
 eval_episodes: 100
-eval_only: true
+eval_only: false
 videos: false
 record_fps: 5
 save_interval: 500000
 save_dir: "./checkpoints"
 save_tag: "arelit_tmaze-ours_l-160_g-4-1_t-01"
-restore: true
+restore: false
 # task: 
 #   task: "tmazev2"
 #   max_episode_steps: 1000
@@ -22,7 +22,7 @@ restore: true
 task: 
   task: "tmaze_ours"
   max_episode_steps: 1000
-  corridor_len: 800
+  corridor_len: 160
   goal_reward: 4
   goal_penalty: 1
   timestep_penalty: 0.1
@@ -45,9 +45,9 @@ trainer:
   d_actor: 128
   d_critic: 128
   gamma: 0.99
-  lamb: 0.95
-  entropy_coef: 0.001
-  value_coef: 0.5
+  gae_lambda: 0.95
+  ent_coef: 0.001
+  vf_coef: 0.5
   max_grad_norm: 0.5
   optimizer:
     learning_rate: 0.0001

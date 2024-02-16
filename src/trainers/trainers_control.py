@@ -119,9 +119,9 @@ class ControlTrainer(BaseTrainer):
             self.agent=A2CAgent(train_envs=train_envs,eval_env=eval_env,optimizer=self.optimizer, repr_model_fn=repr_fn,
                                 seq_model_fn=model_fn,actor_fn=actor_fn,critic_fn=critic_fn,
                                 rollout_len=self.rollout_len,
-                                gamma=self.trainer_config['gamma'],lamb=self.trainer_config['lamb'],
-                                value_loss_coef=self.trainer_config['value_coef'],
-                                entropy_coef=self.trainer_config['entropy_coef'],
+                                gamma=self.trainer_config['gamma'],lamb=self.trainer_config['gae_lambda'],
+                                value_loss_coef=self.trainer_config['vf_coef'],
+                                entropy_coef=self.trainer_config['ent_coef'],
                                 arg_max=self.trainer_config.get('arg_max', False),
                                 continuous_actions=self.global_config.get("continuous_actions", False))
         elif self.trainer_config['agent']=='ppo':
