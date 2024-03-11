@@ -1,5 +1,7 @@
 # Recurrent Linear Transformers
 
+**This is a fork of the original repo, we tried extending code to continuous action space case**
+
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 **Paper URL:** http://arxiv.org/abs/2310.15719
