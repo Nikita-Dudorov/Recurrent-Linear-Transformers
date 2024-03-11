@@ -40,7 +40,7 @@ class A2CAgent(BaseAgent):
                 act_mean = act_mean.squeeze()
                 act_std = jnp.exp(act_logstd.squeeze())
                 acts_tick = jax.random.normal(random_key, shape=act_mean.shape) * act_std + act_mean 
-                logits_diff = jsp.stats.norm.logpdf(acts_tick, loc=act_mean, scale=act_std).sum(-1)  # suppose independent action components -> summation over action dim
+                logits_diff = jsp.stats.norm.logpdf(acts_tick, loc=jax.lax.stop_gradient(act_mean), scale=jax.lax.stop_gradient(act_std)).sum(-1)  # suppose independent action components -> summation over action dim
             else:
                 logits_diff = actor_out
             #Calculate Lamba for timesteps G_{tick} - G_{tick+rollout_len} using 
